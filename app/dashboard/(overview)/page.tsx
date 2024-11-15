@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { lusitana } from '@/app/ui/fonts';
 import LatestInvoices from '@/app/ui/dashboard/latest-invoices';
 import RevenueChart from '@/app/ui/dashboard/revenue-chart';
@@ -8,26 +8,48 @@ import { RevenueChartSkeleton, LatestInvoicesSkeleton, CardsSkeleton } from '@/a
 export default function Page() {
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [latestInvoicesData, setLatestInvoicesData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch revenue data
-    fetch('/api/revenue')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch revenue data');
-        return res.json();
-      })
-      .then((data) => setRevenueData(data))
-      .catch((error) => console.error(error));
+    const fetchData = async () => {
+      try {
+        // Fetch revenue data
+        const revenueResponse = await fetch('/api/revenue');
+        if (!revenueResponse.ok) throw new Error('Failed to fetch revenue data');
+        const revenue = await revenueResponse.json();
+        setRevenueData(revenue);
 
-    // Fetch latest invoices data
-    fetch('/api/latestInvoices')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch invoices data');
-        return res.json();
-      })
-      .then((data) => setLatestInvoicesData(data))
-      .catch((error) => console.error(error));
+        // Fetch latest invoices data
+        const invoicesResponse = await fetch('/api/latestInvoices');
+        if (!invoicesResponse.ok) throw new Error('Failed to fetch invoices data');
+        const invoices = await invoicesResponse.json();
+        setLatestInvoicesData(invoices);
+
+        setLoading(false);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchData();
   }, []);
+
+  if (loading) {
+    return (
+      <main>
+        <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>
+          Dashboard
+        </h1>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <CardsSkeleton />
+        </div>
+        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-4 lg:grid-cols-8">
+          <RevenueChartSkeleton />
+          <LatestInvoicesSkeleton />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main>
@@ -35,16 +57,11 @@ export default function Page() {
         Dashboard
       </h1>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {/* No need to wrap this in Suspense unless it's a lazy-loaded component */}
         <CardWrapper />
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-4 lg:grid-cols-8">
-        <Suspense fallback={<RevenueChartSkeleton />}>
-          <RevenueChart revenue={revenueData} />
-        </Suspense>
-        <Suspense fallback={<LatestInvoicesSkeleton />}>
-          <LatestInvoices latestInvoices={latestInvoicesData} />
-        </Suspense>
+        <RevenueChart revenue={revenueData} />
+        <LatestInvoices latestInvoices={latestInvoicesData} />
       </div>
     </main>
   );
